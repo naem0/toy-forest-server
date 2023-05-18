@@ -59,6 +59,13 @@ async function run() {
         res.send(result);
     });
 
+    app.post('/add-toy', async (req, res) => {
+        const booking = req.body;
+        console.log(booking);
+        const result = await bookingCollection.insertOne(booking);
+        res.send(result);
+    });
+
     
 
     // Send a ping to confirm a successful connection
