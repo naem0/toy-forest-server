@@ -29,10 +29,26 @@ async function run() {
     await client.connect();
 
     const productCollection = client.db('toy-marketplaceDB').collection('toy-products');
+
     app.get('/toy-products', async(req, res)=>{
         const result = await productCollection.find().toArray();
         res.send(result);
-    })
+    });
+
+    app.get('/toy-products/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) }
+
+        const options = {
+            
+            projection: { title: 1, price: 1, service_id: 1, img: 1 },
+        };
+
+        const result = await productCollection.findOne(query, options);
+        res.send(result);
+    });
+
+    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
