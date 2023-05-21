@@ -6,9 +6,6 @@ const port = process.env.port || 5000;
 // middleware
 app.use(cors());
 app.use(express.json());
-// password
-// toy-marketplace
-//RMF3esTd46gPizW5 
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
