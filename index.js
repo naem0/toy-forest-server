@@ -11,7 +11,7 @@ app.use(express.json());
 //RMF3esTd46gPizW5 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.nmmhgrv.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -26,61 +26,78 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
-    const productCollection = client.db('toy-marketplaceDB').collection('toy-products');
+    const productCollection = client.db('toyDB').collection('toy');
 
     app.get('/toy-products', async(req, res)=>{
-        const result = await productCollection.find().toArray();
+        const result = await productCollection.find().sort({ price : -1 }).limit(20).toArray();
         res.send(result);
     });
 
     app.get('/toy-products/:id', async (req, res) => {
         const id = req.params.id;
+        console.log(id)
         const query = { _id: new ObjectId(id) }
-
-        const options = {
-            
-            projection: { title: 1, price: 1, service_id: 1, img: 1 },
-        };
-
-        const result = await productCollection.findOne(query, options);
+        const result = await productCollection.findOne(query);
         res.send(result);
     });
 
-    // bookings 
     app.get('/my-toy', async (req, res) => {
-        console.log(req.query.email);
         let query = {};
         if (req.query?.email) {
-            query = { email: req.query.email }
-        }
+            query = { sellerEmail: req.query.email}
+        };
         const result = await productCollection.find(query).toArray();
         res.send(result);
     });
 
-    app.post('/add-toy', async (req, res) => {
+    app.get('/toy/:category', async (req, res) => {
+        if (req.params.category == "all") {
+          const result = await productCollection.find().toArray();
+          return res.send(result);
+        };
+        const result = await productCollection.find({subcategory: req.params.category}).toArray();
+        res.send(result);
+    });
+
+    const indexKeys = {name: 1};
+    const indexOptions ={name: "serchName"}
+    const result = await productCollection.createIndex(indexKeys, indexOptions)
+    app.get('/toy-serch/:text', async (req, res) => {
+        const text= req.params.text;
+        const result = await productCollection.find({name: { $regex: text, $options: "i"}}).toArray();
+        res.send(result);
+    });
+
+    app.post('/toy-products', async (req, res) => {
         const booking = req.body;
         console.log(booking);
-        const result = await bookingCollection.insertOne(booking);
+        const result = await productCollection.insertOne(booking);
         res.send(result);
     });
 
-    app.patch('/add-toy/:id', async (req, res) => {
-        const id = req.params.id;
-        const filter = { _id: new ObjectId(id) };
-        const updatedBooking = req.body;
-        console.log(updatedBooking);
-        const updateDoc = {
-            $set: {
-                status: updatedBooking.status
-            },
+    app.put('/toys/:id', async(req, res) =>{
+      const id = req.params.id;
+      const filter ={_id: new ObjectId(id)};
+      const options = { upsert: true };
+      const updatedToy = req.body;
+      const toy = {
+          $set: {
+              name: updatedToy.name,
+              quantity: updatedToy.quantity,
+              subcategory: updatedToy.subcategory,
+              details: updatedToy.details,
+              rating: updatedToy.rating, 
+              price: updatedToy.price, 
+              photo: updatedToy.photo,
+          },
         };
-        const result = await productCollection.updateOne(filter, updateDoc);
-        res.send(result);
-    });
+      const result = await productCollection.updateOne(filter, toy, options);
+      res.send(result);
+  })
 
-    app.delete('/add-toy/:id', async (req, res) => {
+    app.delete('/my-toy/:id', async (req, res) => {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) }
         const result = await productCollection.deleteOne(query);
